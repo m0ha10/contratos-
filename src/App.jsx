@@ -716,7 +716,7 @@ export default function App() {
           </Mdl>
         );
       })()}
-
+ 
       {modal === "viewP" && selSis && (() => {
         const c = sis.find(s=>s.id===selSis);
         const ps = sisPays(selSis).sort((a,b)=>a.no_cuota-b.no_cuota);
