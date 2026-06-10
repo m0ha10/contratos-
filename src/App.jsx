@@ -132,7 +132,7 @@ export default function App() {
   const exportPNG = async () => {
     const el = reportRef.current;
     if (!el) return;
-    const { default: html2canvas } = await import("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.esm.js");
+    const { default: html2canvas } = await import("https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.esm.js");
     const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
     const link = document.createElement("a");
     link.download = `comisiones-dapos-${now.getMonth()+1}-${now.getFullYear()}.png`;
