@@ -81,7 +81,7 @@ export default function App() {
 
   useEffect(() => { load(); }, [load]);
 
-  const nav = (p, s) => { setPage(p); setSub(s || (p === "dapos" ? "recurrentes" : "contratos")); };
+  const nav        = (p, s) => { setPage(p); setSub(s || (p === "dapos" ? "recurrentes" : "contratos")); };
   const closeModal = () => { setModal(null); setForm({}); };
 
   const activeRec        = rec.filter(r => r.estado === "Activo");
@@ -124,7 +124,7 @@ export default function App() {
   };
 
   // Export
-  const now    = new Date();
+  const now     = new Date();
   const mesAnio = now.toLocaleString("es-CR", { month: "long", year: "numeric" });
 
   const exportPDF = () => window.print();
@@ -133,14 +133,21 @@ export default function App() {
     const el = reportRef.current;
     if (!el) return;
     try {
-      const { domToPng } = await import("https://cdn.jsdelivr.net/npm/modern-screenshot@4.4.31/dist/index.js");
-      const url = await domToPng(el, { scale: 2, backgroundColor: "#ffffff" });
+      const { default: html2canvas } = await import("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.esm.js");
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        onclone: (clonedDoc) => {
+          clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach(s => s.remove());
+        }
+      });
       const link = document.createElement("a");
       link.download = `comisiones-dapos-${now.getMonth()+1}-${now.getFullYear()}.png`;
-      link.href = url;
+      link.href = canvas.toDataURL("image/png");
       link.click();
     } catch(e) {
-      alert("Error al generar PNG. Usá el botón PDF como alternativa.");
+      console.error(e);
+      alert("Error al generar PNG. Usá el botón PDF.");
     }
   };
 
@@ -223,7 +230,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 flex print:block" style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <style>{`@media print { body * { visibility: hidden; } #print-report, #print-report * { visibility: visible; } #print-report { position: fixed; top: 0; left: 0; width: 100%; } }`}</style>
 
-      {/* ── Sidebar ── */}
+      {/* Sidebar */}
       <aside className="w-52 bg-[#0a1628] flex flex-col py-5 px-3 flex-shrink-0 min-h-screen print:hidden">
         <div className="px-2 mb-7">
           <div className="text-emerald-400 text-[10px] font-bold tracking-[0.2em] uppercase mb-1">m0hasistemas</div>
@@ -253,7 +260,7 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
+      {/* Main */}
       <main className="flex-1 overflow-auto print:hidden">
         <div className="max-w-5xl mx-auto p-5 pb-12">
 
@@ -274,10 +281,10 @@ export default function App() {
               )}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { l: "Comisión Recurrente", v: fCRC(totRec), s: `${resumen.contratos_activos || 0} contratos`, c: "text-emerald-600", dot: "bg-emerald-400" },
-                  { l: "Pagos Únicos",        v: fCRC(totOne), s: `${one.length} ventas`,                        c: "text-sky-600",     dot: "bg-sky-400"     },
-                  { l: "Total D-APOS",        v: fCRC(totRec + totOne), s: "comisión total",                     c: "text-indigo-600",  dot: "bg-indigo-400"  },
-                  { l: "Sistemas en Cuotas",  v: String(resumen.sistemas_activos || 0), s: "activos",            c: "text-violet-600",  dot: "bg-violet-400"  },
+                  { l: "Comisión Recurrente", v: fCRC(totRec),           s: `${resumen.contratos_activos || 0} contratos`, c: "text-emerald-600", dot: "bg-emerald-400" },
+                  { l: "Pagos Únicos",        v: fCRC(totOne),           s: `${one.length} ventas`,                        c: "text-sky-600",     dot: "bg-sky-400"     },
+                  { l: "Total D-APOS",        v: fCRC(totRec + totOne),  s: "comisión total",                              c: "text-indigo-600",  dot: "bg-indigo-400"  },
+                  { l: "Sistemas en Cuotas",  v: String(resumen.sistemas_activos || 0), s: "activos",                     c: "text-violet-600",  dot: "bg-violet-400"  },
                 ].map((c, i) => (
                   <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
                     <div className="flex items-center gap-1.5 mb-2"><div className={`w-1.5 h-1.5 rounded-full ${c.dot}`} /><span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{c.l}</span></div>
@@ -503,7 +510,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* ── REPORTE ── */}
+      {/* REPORTE */}
       {showReport && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl max-h-[92vh] flex flex-col">
@@ -519,7 +526,7 @@ export default function App() {
             <div className="overflow-y-auto flex-1">
               <div id="print-report" ref={reportRef} className="p-8 bg-white" style={{ fontFamily: "system-ui, sans-serif", minWidth: 700 }}>
                 {/* Header */}
-                <div className="flex justify-between items-start mb-8 pb-5 border-b-2 border-slate-800">
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:32, paddingBottom:20, borderBottom:"2px solid #1e293b" }}>
                   <div>
                     <div style={{ color:"#059669", fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", marginBottom:4 }}>m0hasistemas.org</div>
                     <div style={{ fontSize:24, fontWeight:700, color:"#1e293b" }}>Reporte de Comisiones</div>
@@ -569,13 +576,13 @@ export default function App() {
                             <td style={{ padding:"8px 12px", fontFamily:"monospace", color:"#94a3b8", fontSize:12, borderBottom:"1px solid #f1f5f9" }}>{r.no_contrato||"—"}</td>
                             <td style={{ padding:"8px 12px", fontWeight:500, color:"#1e293b", borderBottom:"1px solid #f1f5f9" }}>{r.cliente}</td>
                             <td style={{ padding:"8px 12px", color:"#64748b", fontSize:12, borderBottom:"1px solid #f1f5f9" }}>{r.servicio}</td>
-                            <td style={{ padding:"8px 12px", textAlign:"right", fontVariantNumeric:"tabular-nums", borderBottom:"1px solid #f1f5f9" }}>{fCRC(r.monto)}</td>
+                            <td style={{ padding:"8px 12px", textAlign:"right", borderBottom:"1px solid #f1f5f9" }}>{fCRC(r.monto)}</td>
                             <td style={{ padding:"8px 12px", textAlign:"center", borderBottom:"1px solid #f1f5f9" }}>
                               {r.es_nuevo
                                 ? <span style={{ background:"#fef3c7", color:"#92400e", padding:"2px 8px", borderRadius:20, fontSize:11, fontWeight:600 }}>Nueva</span>
                                 : <span style={{ color:"#64748b", fontSize:12 }}>{(parseFloat(r.tasa)*100).toFixed(0)}%</span>}
                             </td>
-                            <td style={{ padding:"8px 12px", textAlign:"right", fontWeight:700, color:"#059669", fontVariantNumeric:"tabular-nums", borderBottom:"1px solid #f1f5f9" }}>{fCRC(comm)}</td>
+                            <td style={{ padding:"8px 12px", textAlign:"right", fontWeight:700, color:"#059669", borderBottom:"1px solid #f1f5f9" }}>{fCRC(comm)}</td>
                           </tr>
                         );
                       })}
@@ -638,7 +645,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ── MODALS ── */}
+      {/* MODALS */}
       {modal === "addR" && (
         <Mdl title="Agregar Contrato Recurrente D-APOS" onOk={addRec}>
           <F lbl="No. Contrato D-APOS"><input className={inp} placeholder="ej: 12345" value={form.no_contrato||""} onChange={e=>setForm({...form,no_contrato:e.target.value})} /></F>
