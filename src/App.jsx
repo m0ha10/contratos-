@@ -3,7 +3,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import * as XLSX from "xlsx";
 import {
   PlusCircle, Trash2, X, Star, Building2, Cpu, TrendingUp,
-  FileText, CheckCircle, ChevronRight, RefreshCw, Wifi, WifiOff, AlertTriangle
+  FileText, CheckCircle, ChevronRight, RefreshCw, Wifi, WifiOff,
+  AlertTriangle, LogOut, Eye, EyeOff, Lock
 } from "lucide-react";
 
 const API = "https://api-contratos.m0hasistemas.org";
@@ -11,6 +12,10 @@ const HDR = { "Content-Type": "application/json", "Prefer": "return=representati
 const fCRC = (n) => `₡${Math.round(n || 0).toLocaleString("es-CR")}`;
 const TODAY = new Date().toISOString().split("T")[0];
 const NEW_BONUS = 10000;
+
+// ─── Credenciales — cambiá estos valores cuando querás ───────────────────────
+const CREDENTIALS = { user: "moha", pass: "m0ha2026" };
+const SESSION_KEY = "contratos_auth";
 
 const SERVICES = [
   { label: "Fibra Óptica Residencial", rate: 0.02 },
@@ -42,7 +47,7 @@ const isOverdue = (contract, paidCount) => {
   return new Date() > nextDue;
 };
 
-// ─── UI Atoms FUERA de App para evitar remount en cada tecla ──────────────────
+// ─── UI Atoms (fuera de App para evitar remount) ──────────────────────────────
 const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white";
 
 const Bdg = ({ s }) => {
@@ -72,8 +77,103 @@ const Mdl = ({ title, onClose, onOk, saving, children }) => (
   </div>
 );
 
+// ─── Login Screen ─────────────────────────────────────────────────────────────
+const LoginScreen = ({ onLogin }) => {
+  const [user, setUser]       = useState("");
+  const [pass, setPass]       = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError]     = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = () => {
+    setLoading(true);
+    setError("");
+    setTimeout(() => {
+      if (user === CREDENTIALS.user && pass === CREDENTIALS.pass) {
+        sessionStorage.setItem(SESSION_KEY, "1");
+        onLogin();
+      } else {
+        setError("Usuario o contraseña incorrectos");
+        setLoading(false);
+      }
+    }, 500);
+  };
+
+  const handleKey = (e) => { if (e.key === "Enter") handleLogin(); };
+
+  return (
+    <div className="min-h-screen bg-[#0a1628] flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="text-emerald-400 text-[11px] font-bold tracking-[0.3em] uppercase mb-2">m0hasistemas</div>
+          <div className="text-white text-3xl font-bold">Contratos</div>
+          <div className="text-slate-500 text-sm mt-1">Sistema de Gestión</div>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="flex items-center justify-center w-12 h-12 bg-emerald-600/20 rounded-xl mx-auto mb-5">
+            <Lock size={22} className="text-emerald-400" />
+          </div>
+          <p className="text-slate-400 text-sm text-center mb-5">Ingresá tus credenciales para continuar</p>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Usuario</label>
+              <input
+                className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                placeholder="Usuario"
+                value={user}
+                onChange={e => setUser(e.target.value)}
+                onKeyDown={handleKey}
+                autoComplete="username"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Contraseña</label>
+              <div className="relative">
+                <input
+                  className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2.5 pr-10 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  type={showPass ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={pass}
+                  onChange={e => setPass(e.target.value)}
+                  onKeyDown={handleKey}
+                  autoComplete="current-password"
+                />
+                <button onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                  {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mt-3 bg-red-500/20 border border-red-500/30 rounded-lg px-3 py-2 text-red-300 text-xs text-center">
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleLogin}
+            disabled={loading || !user || !pass}
+            className="w-full mt-5 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? <><RefreshCw size={14} className="animate-spin" /> Verificando...</> : "Ingresar"}
+          </button>
+        </div>
+
+        <p className="text-slate-600 text-xs text-center mt-6">contratos.m0hasistemas.org</p>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
+  const [authed, setAuthed]         = useState(() => sessionStorage.getItem(SESSION_KEY) === "1");
   const [ready, setReady]           = useState(false);
   const [page, setPage]             = useState("dashboard");
   const [sub, setSub]               = useState("recurrentes");
@@ -90,7 +190,11 @@ export default function App() {
   const [showReport, setShowReport] = useState(false);
   const reportRef = useRef(null);
 
-  const load = useCallback(async () => {
+  const logout = () => { sessionStorage.removeItem(SESSION_KEY); setAuthed(false); };
+
+  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
+
+  const load = async () => {
     setReady(false);
     try {
       const [r, o, s, p, rs] = await Promise.all([
@@ -108,9 +212,9 @@ export default function App() {
       setOnline(true);
     } catch (_) { setOnline(false); }
     setReady(true);
-  }, []);
+  };
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, []);
 
   const nav        = (p, s) => { setPage(p); setSub(s || (p === "dapos" ? "recurrentes" : "contratos")); };
   const closeModal = () => { setModal(null); setForm({}); };
@@ -125,7 +229,6 @@ export default function App() {
   const sisPaidCt        = (cid) => sisPays(cid).filter(p => p.estado === "Pagado").length;
   const overdueContracts = sis.filter(s => s.estado === "Activo" && isOverdue(s, sisPaidCt(s.id)));
 
-  // CRUD
   const addRec = async () => {
     setSaving(true);
     const svc = SERVICES.find(s => s.label === form.servicio) || { rate: 0.05 };
@@ -156,10 +259,8 @@ export default function App() {
     await load(); setSaving(false); closeModal();
   };
 
-  // Export
   const now     = new Date();
   const mesAnio = now.toLocaleString("es-CR", { month: "long", year: "numeric" });
-
   const exportPDF = () => window.print();
 
   const exportPNG = async () => {
@@ -168,50 +269,33 @@ export default function App() {
     try {
       const { default: html2canvas } = await import("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.esm.js");
       const canvas = await html2canvas(el, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        onclone: (clonedDoc) => {
-          clonedDoc.querySelectorAll('link[rel="stylesheet"], style').forEach(s => s.remove());
-        }
+        scale: 2, backgroundColor: "#ffffff",
+        onclone: (d) => d.querySelectorAll('link[rel="stylesheet"], style').forEach(s => s.remove())
       });
       const link = document.createElement("a");
       link.download = `comisiones-dapos-${now.getMonth()+1}-${now.getFullYear()}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-    } catch(e) {
-      console.error(e);
-      alert("Error al generar PNG. Usá el botón PDF.");
-    }
+    } catch(e) { alert("Error al generar PNG. Usá el botón PDF."); }
   };
 
   const exportExcel = () => {
     const wb = XLSX.utils.book_new();
     const recData = [
-      ["COMISIONES RECURRENTES D-APOS"],
-      ["Mes:", mesAnio],
-      [],
+      ["COMISIONES RECURRENTES D-APOS"], ["Mes:", mesAnio], [],
       ["Contrato", "Cliente", "Servicio", "Monto (₡)", "Tasa", "Comisión (₡)"],
-      ...activeRec.map(r => [
-        r.no_contrato || "—", r.cliente, r.servicio,
-        parseFloat(r.monto),
-        r.es_nuevo ? "Nueva inst." : `${(parseFloat(r.tasa)*100).toFixed(0)}%`,
-        r.es_nuevo ? 10000 : parseFloat(r.monto) * parseFloat(r.tasa)
-      ]),
-      [],
-      ["", "", "", "", "TOTAL:", totRec],
+      ...activeRec.map(r => [r.no_contrato || "—", r.cliente, r.servicio, parseFloat(r.monto), r.es_nuevo ? "Nueva inst." : `${(parseFloat(r.tasa)*100).toFixed(0)}%`, r.es_nuevo ? 10000 : parseFloat(r.monto) * parseFloat(r.tasa)]),
+      [], ["", "", "", "", "TOTAL:", totRec],
     ];
     const ws1 = XLSX.utils.aoa_to_sheet(recData);
     ws1["!cols"] = [{ wch: 12 }, { wch: 32 }, { wch: 30 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws1, "Recurrentes");
     if (one.length > 0) {
       const oneData = [
-        ["COMISIONES PAGOS ÚNICOS D-APOS"],
-        ["Mes:", mesAnio],
-        [],
+        ["COMISIONES PAGOS ÚNICOS D-APOS"], ["Mes:", mesAnio], [],
         ["Factura", "Cliente", "Descripción", "Monto (₡)", "Comisión (₡)"],
         ...one.map(o => [o.no_factura || "—", o.cliente, o.descripcion, parseFloat(o.monto), parseFloat(o.monto) * 0.01]),
-        [],
-        ["", "", "", "TOTAL:", totOne],
+        [], ["", "", "", "TOTAL:", totOne],
       ];
       const ws2 = XLSX.utils.aoa_to_sheet(oneData);
       ws2["!cols"] = [{ wch: 12 }, { wch: 32 }, { wch: 30 }, { wch: 14 }, { wch: 14 }];
@@ -229,7 +313,7 @@ export default function App() {
     <div className="min-h-screen bg-[#0a1628] flex items-center justify-center">
       <div className="text-center">
         <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-slate-400 text-sm">Conectando...</p>
+        <p className="text-slate-400 text-sm">Cargando datos...</p>
       </div>
     </div>
   );
@@ -262,9 +346,10 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="px-2 pt-4 border-t border-white/5">
-          <button onClick={load} className="flex items-center gap-2 text-slate-600 text-xs hover:text-slate-400"><RefreshCw size={11} /> Actualizar datos</button>
-          <div className="text-slate-700 text-[10px] mt-2">{new Date().toLocaleString("es-CR", { month: "long", year: "numeric" })}</div>
+        <div className="px-2 pt-4 border-t border-white/5 space-y-2">
+          <button onClick={load} className="flex items-center gap-2 text-slate-600 text-xs hover:text-slate-400 w-full"><RefreshCw size={11} /> Actualizar datos</button>
+          <button onClick={logout} className="flex items-center gap-2 text-slate-600 text-xs hover:text-red-400 w-full transition-colors"><LogOut size={11} /> Cerrar sesión</button>
+          <div className="text-slate-700 text-[10px]">{new Date().toLocaleString("es-CR", { month: "long", year: "numeric" })}</div>
         </div>
       </aside>
 
