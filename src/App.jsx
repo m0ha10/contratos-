@@ -192,9 +192,8 @@ export default function App() {
 
   const logout = () => { sessionStorage.removeItem(SESSION_KEY); setAuthed(false); };
 
-  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
-
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (!authed) return;
     setReady(false);
     try {
       const [r, o, s, p, rs] = await Promise.all([
@@ -212,9 +211,11 @@ export default function App() {
       setOnline(true);
     } catch (_) { setOnline(false); }
     setReady(true);
-  };
+  }, [authed]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
 
   const nav        = (p, s) => { setPage(p); setSub(s || (p === "dapos" ? "recurrentes" : "contratos")); };
   const closeModal = () => { setModal(null); setForm({}); };
