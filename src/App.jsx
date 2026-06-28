@@ -42,6 +42,37 @@ const isOverdue = (contract, paidCount) => {
   return new Date() > nextDue;
 };
 
+// ─── UI Atoms FUERA de App para evitar remount en cada tecla ──────────────────
+const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white";
+
+const Bdg = ({ s }) => {
+  const m = { Activo: "bg-emerald-100 text-emerald-700", Cancelado: "bg-red-100 text-red-600", Pagado: "bg-sky-100 text-sky-700", Pendiente: "bg-amber-100 text-amber-700" };
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${m[s] || "bg-gray-100 text-gray-600"}`}>{s}</span>;
+};
+
+const F = ({ lbl, children }) => (
+  <div><label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">{lbl}</label>{children}</div>
+);
+
+const Mdl = ({ title, onClose, onOk, saving, children }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="flex justify-between items-center px-5 py-4 border-b">
+        <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"><X size={16} /></button>
+      </div>
+      <div className="px-5 py-4 space-y-3.5 overflow-y-auto flex-1">{children}</div>
+      <div className="flex gap-2 px-5 py-4 border-t">
+        <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border text-slate-600 text-sm hover:bg-slate-50 font-medium">Cancelar</button>
+        <button onClick={onOk} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2">
+          {saving && <RefreshCw size={13} className="animate-spin" />} Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [ready, setReady]           = useState(false);
   const [page, setPage]             = useState("dashboard");
@@ -83,6 +114,8 @@ export default function App() {
 
   const nav        = (p, s) => { setPage(p); setSub(s || (p === "dapos" ? "recurrentes" : "contratos")); };
   const closeModal = () => { setModal(null); setForm({}); };
+  const sf         = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const sc         = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.checked }));
 
   const activeRec        = rec.filter(r => r.estado === "Activo");
   const totRec           = parseFloat(resumen.comision_recurrente || 0);
@@ -187,31 +220,6 @@ export default function App() {
     XLSX.writeFile(wb, `comisiones-dapos-${now.getMonth()+1}-${now.getFullYear()}.xlsx`);
   };
 
-  // UI Atoms
-  const Bdg = ({ s }) => {
-    const m = { Activo: "bg-emerald-100 text-emerald-700", Cancelado: "bg-red-100 text-red-600", Pagado: "bg-sky-100 text-sky-700", Pendiente: "bg-amber-100 text-amber-700" };
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${m[s] || "bg-gray-100 text-gray-600"}`}>{s}</span>;
-  };
-  const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 bg-white";
-  const F   = ({ lbl, children }) => <div><label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">{lbl}</label>{children}</div>;
-  const Mdl = ({ title, onOk, children }) => (
-    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center px-5 py-4 border-b">
-          <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
-          <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"><X size={16} /></button>
-        </div>
-        <div className="px-5 py-4 space-y-3.5 overflow-y-auto flex-1">{children}</div>
-        <div className="flex gap-2 px-5 py-4 border-t">
-          <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border text-slate-600 text-sm hover:bg-slate-50 font-medium">Cancelar</button>
-          <button onClick={onOk} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2">
-            {saving && <RefreshCw size={13} className="animate-spin" />} Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
   const chartData = [
     { m: "Ene", v: 18200 }, { m: "Feb", v: 21000 }, { m: "Mar", v: 26182 },
     { m: "Abr", v: 22450 }, { m: "May", v: 6922 },  { m: "Jun", v: totRec },
@@ -281,10 +289,10 @@ export default function App() {
               )}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { l: "Comisión Recurrente", v: fCRC(totRec),           s: `${resumen.contratos_activos || 0} contratos`, c: "text-emerald-600", dot: "bg-emerald-400" },
-                  { l: "Pagos Únicos",        v: fCRC(totOne),           s: `${one.length} ventas`,                        c: "text-sky-600",     dot: "bg-sky-400"     },
-                  { l: "Total D-APOS",        v: fCRC(totRec + totOne),  s: "comisión total",                              c: "text-indigo-600",  dot: "bg-indigo-400"  },
-                  { l: "Sistemas en Cuotas",  v: String(resumen.sistemas_activos || 0), s: "activos",                     c: "text-violet-600",  dot: "bg-violet-400"  },
+                  { l: "Comisión Recurrente", v: fCRC(totRec),          s: `${resumen.contratos_activos || 0} contratos`, c: "text-emerald-600", dot: "bg-emerald-400" },
+                  { l: "Pagos Únicos",        v: fCRC(totOne),          s: `${one.length} ventas`,                        c: "text-sky-600",     dot: "bg-sky-400"     },
+                  { l: "Total D-APOS",        v: fCRC(totRec + totOne), s: "comisión total",                              c: "text-indigo-600",  dot: "bg-indigo-400"  },
+                  { l: "Sistemas en Cuotas",  v: String(resumen.sistemas_activos || 0), s: "activos",                    c: "text-violet-600",  dot: "bg-violet-400"  },
                 ].map((c, i) => (
                   <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
                     <div className="flex items-center gap-1.5 mb-2"><div className={`w-1.5 h-1.5 rounded-full ${c.dot}`} /><span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{c.l}</span></div>
@@ -525,7 +533,6 @@ export default function App() {
             </div>
             <div className="overflow-y-auto flex-1">
               <div id="print-report" ref={reportRef} className="p-8 bg-white" style={{ fontFamily: "system-ui, sans-serif", minWidth: 700 }}>
-                {/* Header */}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:32, paddingBottom:20, borderBottom:"2px solid #1e293b" }}>
                   <div>
                     <div style={{ color:"#059669", fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", marginBottom:4 }}>m0hasistemas.org</div>
@@ -538,7 +545,6 @@ export default function App() {
                     <div style={{ fontSize:11, color:"#94a3b8", marginTop:4 }}>{now.toLocaleDateString("es-CR")}</div>
                   </div>
                 </div>
-                {/* Summary */}
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:32 }}>
                   <div style={{ borderLeft:"4px solid #10b981", background:"#f0fdf4", borderRadius:12, padding:16 }}>
                     <div style={{ fontSize:11, fontWeight:600, color:"#6b7280", textTransform:"uppercase", marginBottom:4 }}>Comisiones Recurrentes</div>
@@ -553,7 +559,6 @@ export default function App() {
                     <div style={{ fontSize:22, fontWeight:700, color:"#ffffff" }}>{fCRC(totRec+totOne)}</div>
                   </div>
                 </div>
-                {/* Tabla recurrentes */}
                 <div style={{ marginBottom:32 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#10b981" }} />
@@ -595,7 +600,6 @@ export default function App() {
                     </tfoot>
                   </table>
                 </div>
-                {/* Tabla pagos únicos */}
                 {one.length > 0 && (
                   <div style={{ marginBottom:32 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
@@ -631,7 +635,6 @@ export default function App() {
                     </table>
                   </div>
                 )}
-                {/* Footer */}
                 <div style={{ borderTop:"2px solid #1e293b", paddingTop:20, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <div style={{ fontSize:11, color:"#94a3b8" }}>Generado por contratos.m0hasistemas.org · {now.toLocaleDateString("es-CR")}</div>
                   <div style={{ background:"#1e293b", color:"#fff", padding:"12px 24px", borderRadius:12, textAlign:"right" }}>
@@ -647,19 +650,19 @@ export default function App() {
 
       {/* MODALS */}
       {modal === "addR" && (
-        <Mdl title="Agregar Contrato Recurrente D-APOS" onOk={addRec}>
-          <F lbl="No. Contrato D-APOS"><input className={inp} placeholder="ej: 12345" value={form.no_contrato||""} onChange={e=>setForm({...form,no_contrato:e.target.value})} /></F>
-          <F lbl="Cliente"><input className={inp} placeholder="Nombre completo" value={form.cliente||""} onChange={e=>setForm({...form,cliente:e.target.value})} /></F>
+        <Mdl title="Agregar Contrato Recurrente D-APOS" onClose={closeModal} onOk={addRec} saving={saving}>
+          <F lbl="No. Contrato D-APOS"><input className={inp} placeholder="ej: 12345" value={form.no_contrato||""} onChange={sf("no_contrato")} autoComplete="off" /></F>
+          <F lbl="Cliente"><input className={inp} placeholder="Nombre completo" value={form.cliente||""} onChange={sf("cliente")} autoComplete="off" /></F>
           <F lbl="Tipo de Servicio">
-            <select className={inp} value={form.servicio||""} onChange={e=>setForm({...form,servicio:e.target.value})}>
+            <select className={inp} value={form.servicio||""} onChange={sf("servicio")}>
               <option value="">Seleccionar...</option>
               {SERVICES.map(s => <option key={s.label} value={s.label}>{s.label} ({(s.rate*100).toFixed(0)}%)</option>)}
             </select>
           </F>
-          <F lbl="Monto del Contrato (₡)"><input className={inp} type="number" placeholder="ej: 25500" value={form.monto||""} onChange={e=>setForm({...form,monto:e.target.value})} /></F>
-          <F lbl="Fecha de Inicio"><input className={inp} type="date" value={form.fecha_inicio||TODAY} onChange={e=>setForm({...form,fecha_inicio:e.target.value})} /></F>
+          <F lbl="Monto del Contrato (₡)"><input className={inp} type="number" placeholder="ej: 25500" value={form.monto||""} onChange={sf("monto")} autoComplete="off" /></F>
+          <F lbl="Fecha de Inicio"><input className={inp} type="date" value={form.fecha_inicio||TODAY} onChange={sf("fecha_inicio")} /></F>
           <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 p-4 rounded-xl">
-            <input id="cn" type="checkbox" className="mt-0.5 accent-amber-500 w-4 h-4" checked={!!form.es_nuevo} onChange={e=>setForm({...form,es_nuevo:e.target.checked})} />
+            <input id="cn" type="checkbox" className="mt-0.5 accent-amber-500 w-4 h-4" checked={!!form.es_nuevo} onChange={sc("es_nuevo")} />
             <label htmlFor="cn" className="text-sm text-amber-800 cursor-pointer">
               <div className="font-bold">¿Nueva instalación este mes?</div>
               <div className="text-xs text-amber-600 mt-0.5">Comisión fija de <strong>₡10,000</strong> en lugar del porcentaje</div>
@@ -675,27 +678,27 @@ export default function App() {
       )}
 
       {modal === "addO" && (
-        <Mdl title="Agregar Venta / Pago Único" onOk={addOne}>
-          <F lbl="No. Factura D-APOS"><input className={inp} placeholder="ej: 12345" value={form.no_factura||""} onChange={e=>setForm({...form,no_factura:e.target.value})} /></F>
-          <F lbl="Cliente"><input className={inp} placeholder="Nombre" value={form.cliente||""} onChange={e=>setForm({...form,cliente:e.target.value})} /></F>
-          <F lbl="Descripción"><input className={inp} placeholder="ej: Venta de equipo, Instalación..." value={form.descripcion||""} onChange={e=>setForm({...form,descripcion:e.target.value})} /></F>
-          <F lbl="Monto (₡)"><input className={inp} type="number" value={form.monto||""} onChange={e=>setForm({...form,monto:e.target.value})} /></F>
-          <F lbl="Fecha"><input className={inp} type="date" value={form.fecha||TODAY} onChange={e=>setForm({...form,fecha:e.target.value})} /></F>
+        <Mdl title="Agregar Venta / Pago Único" onClose={closeModal} onOk={addOne} saving={saving}>
+          <F lbl="No. Factura D-APOS"><input className={inp} placeholder="ej: 12345" value={form.no_factura||""} onChange={sf("no_factura")} autoComplete="off" /></F>
+          <F lbl="Cliente"><input className={inp} placeholder="Nombre" value={form.cliente||""} onChange={sf("cliente")} autoComplete="off" /></F>
+          <F lbl="Descripción"><input className={inp} placeholder="ej: Venta de equipo, Instalación..." value={form.descripcion||""} onChange={sf("descripcion")} autoComplete="off" /></F>
+          <F lbl="Monto (₡)"><input className={inp} type="number" value={form.monto||""} onChange={sf("monto")} autoComplete="off" /></F>
+          <F lbl="Fecha"><input className={inp} type="date" value={form.fecha||TODAY} onChange={sf("fecha")} /></F>
           {form.monto && <div className="bg-sky-50 rounded-xl p-3.5 flex justify-between"><span className="text-sky-700 text-sm">Comisión (1%):</span><span className="font-bold text-sky-700">{fCRC((parseFloat(form.monto)||0)*0.01)}</span></div>}
         </Mdl>
       )}
 
       {modal === "addS" && (
-        <Mdl title="Nuevo Contrato de Sistema" onOk={addSis}>
-          <F lbl="Cliente / Empresa"><input className={inp} placeholder="Nombre del cliente" value={form.cliente||""} onChange={e=>setForm({...form,cliente:e.target.value})} /></F>
-          <F lbl="Sistema / Producto"><input className={inp} placeholder="ej: Sistema POS, RRHH, Sitio Web..." value={form.sistema||""} onChange={e=>setForm({...form,sistema:e.target.value})} /></F>
-          <F lbl="URL del Sistema"><input className={inp} placeholder="https://cliente.m0hasistemas.org" value={form.url_sistema||""} onChange={e=>setForm({...form,url_sistema:e.target.value})} /></F>
-          <F lbl="Cuota Mensual (₡)"><input className={inp} type="number" placeholder="ej: 15000" value={form.cuota_mensual||""} onChange={e=>setForm({...form,cuota_mensual:e.target.value})} /></F>
+        <Mdl title="Nuevo Contrato de Sistema" onClose={closeModal} onOk={addSis} saving={saving}>
+          <F lbl="Cliente / Empresa"><input className={inp} placeholder="Nombre del cliente" value={form.cliente||""} onChange={sf("cliente")} autoComplete="off" /></F>
+          <F lbl="Sistema / Producto"><input className={inp} placeholder="ej: Sistema POS, RRHH, Sitio Web..." value={form.sistema||""} onChange={sf("sistema")} autoComplete="off" /></F>
+          <F lbl="URL del Sistema"><input className={inp} placeholder="https://cliente.m0hasistemas.org" value={form.url_sistema||""} onChange={sf("url_sistema")} autoComplete="off" /></F>
+          <F lbl="Cuota Mensual (₡)"><input className={inp} type="number" placeholder="ej: 15000" value={form.cuota_mensual||""} onChange={sf("cuota_mensual")} autoComplete="off" /></F>
           <div className="grid grid-cols-2 gap-3">
-            <F lbl="Fecha de Inicio"><input className={inp} type="date" value={form.fecha_inicio||TODAY} onChange={e=>setForm({...form,fecha_inicio:e.target.value})} /></F>
-            <F lbl="Teléfono"><input className={inp} placeholder="88880000" value={form.telefono||""} onChange={e=>setForm({...form,telefono:e.target.value})} /></F>
+            <F lbl="Fecha de Inicio"><input className={inp} type="date" value={form.fecha_inicio||TODAY} onChange={sf("fecha_inicio")} /></F>
+            <F lbl="Teléfono"><input className={inp} placeholder="88880000" value={form.telefono||""} onChange={sf("telefono")} autoComplete="off" /></F>
           </div>
-          <F lbl="Notas"><input className={inp} placeholder="Detalles adicionales..." value={form.notas||""} onChange={e=>setForm({...form,notas:e.target.value})} /></F>
+          <F lbl="Notas"><input className={inp} placeholder="Detalles adicionales..." value={form.notas||""} onChange={sf("notas")} autoComplete="off" /></F>
         </Mdl>
       )}
 
@@ -703,13 +706,13 @@ export default function App() {
         const c = sis.find(s => s.id === selSis);
         const overdue = isOverdue(c, sisPaidCt(selSis));
         return (
-          <Mdl title="Registrar Pago" onOk={addPay}>
+          <Mdl title="Registrar Pago" onClose={closeModal} onOk={addPay} saving={saving}>
             <div className={`rounded-xl p-4 ${overdue?"bg-red-50 border border-red-100":"bg-violet-50"}`}>
               <div className={`font-bold ${overdue?"text-red-800":"text-violet-800"}`}>{c?.cliente}</div>
               <div className={`text-sm mt-0.5 ${overdue?"text-red-600":"text-violet-600"}`}>{c?.sistema} · Cuota #{sisPaidCt(selSis)+1}</div>
             </div>
-            <F lbl="Monto Recibido (₡)"><input className={inp} type="number" value={form.monto||""} onChange={e=>setForm({...form,monto:e.target.value})} /></F>
-            <F lbl="Fecha de Pago"><input className={inp} type="date" value={form.fecha||TODAY} onChange={e=>setForm({...form,fecha:e.target.value})} /></F>
+            <F lbl="Monto Recibido (₡)"><input className={inp} type="number" value={form.monto||""} onChange={sf("monto")} autoComplete="off" /></F>
+            <F lbl="Fecha de Pago"><input className={inp} type="date" value={form.fecha||TODAY} onChange={sf("fecha")} /></F>
           </Mdl>
         );
       })()}
