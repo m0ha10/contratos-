@@ -4,7 +4,7 @@ import * as XLSX from "xlsx";
 import {
   PlusCircle, Trash2, X, Star, Building2, Cpu, TrendingUp,
   FileText, CheckCircle, ChevronRight, RefreshCw, Wifi, WifiOff,
-  AlertTriangle, LogOut, Eye, EyeOff, Lock
+  AlertTriangle, LogOut, Eye, EyeOff, Lock, Edit2
 } from "lucide-react";
 
 const API = "https://api-contratos.m0hasistemas.org";
@@ -187,6 +187,7 @@ export default function App() {
   const [selSis, setSelSis]         = useState(null);
   const [form, setForm]             = useState({});
   const [saving, setSaving]         = useState(false);
+  const [editId, setEditId]         = useState(null);
   const [showReport, setShowReport] = useState(false);
   const reportRef = useRef(null);
 
@@ -218,7 +219,7 @@ export default function App() {
   if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
 
   const nav        = (p, s) => { setPage(p); setSub(s || (p === "dapos" ? "recurrentes" : "contratos")); };
-  const closeModal = () => { setModal(null); setForm({}); };
+  const closeModal = () => { setModal(null); setForm({}); setEditId(null); };
   const sf         = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const sc         = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.checked }));
 
@@ -233,8 +234,14 @@ export default function App() {
   const addRec = async () => {
     setSaving(true);
     const svc = SERVICES.find(s => s.label === form.servicio) || { rate: 0.05 };
-    await post("dapos_recurrentes", { no_contrato: form.no_contrato || null, cliente: form.cliente, servicio: form.servicio || "Otro", monto: parseFloat(form.monto) || 0, tasa: svc.rate, fecha_inicio: form.fecha_inicio || TODAY, es_nuevo: !!form.es_nuevo });
+    const body = { no_contrato: form.no_contrato || null, cliente: form.cliente, servicio: form.servicio || "Otro", monto: parseFloat(form.monto) || 0, tasa: svc.rate, fecha_inicio: form.fecha_inicio || TODAY, es_nuevo: !!form.es_nuevo };
+    if (editId) { await patch("dapos_recurrentes", editId, body); } else { await post("dapos_recurrentes", body); }
     await load(); setSaving(false); closeModal();
+  };
+  const openEditRec = (r) => {
+    setEditId(r.id);
+    setForm({ no_contrato: r.no_contrato||"", cliente: r.cliente, servicio: r.servicio, monto: r.monto, fecha_inicio: r.fecha_inicio, es_nuevo: r.es_nuevo });
+    setModal("addR");
   };
   const toggleNuevo     = async (r) => { await patch("dapos_recurrentes", r.id, { es_nuevo: !r.es_nuevo }); await load(); };
   const toggleEstadoRec = async (r) => { await patch("dapos_recurrentes", r.id, { estado: r.estado === "Activo" ? "Cancelado" : "Activo" }); await load(); };
@@ -242,15 +249,30 @@ export default function App() {
 
   const addOne = async () => {
     setSaving(true);
-    await post("dapos_unicos", { no_factura: form.no_factura || null, cliente: form.cliente, descripcion: form.descripcion, monto: parseFloat(form.monto) || 0, fecha: form.fecha || TODAY, estado: "Pendiente" });
+    const body = { no_factura: form.no_factura || null, cliente: form.cliente, descripcion: form.descripcion, monto: parseFloat(form.monto) || 0, fecha: form.fecha || TODAY, estado: "Pendiente" };
+    if (editId) { await patch("dapos_unicos", editId, body); } else { await post("dapos_unicos", body); }
     await load(); setSaving(false); closeModal();
+  };
+  const openEditOne = (o) => {
+    setEditId(o.id);
+    setForm({ no_factura: o.no_factura||"", cliente: o.cliente, descripcion: o.descripcion, monto: o.monto, fecha: o.fecha });
+    setModal("addO");
   };
   const delOne = async (id) => { await del("dapos_unicos", id); await load(); };
 
   const addSis = async () => {
     setSaving(true);
-    await post("sistemas_contratos", { cliente: form.cliente, telefono: form.telefono || null, sistema: form.sistema, monto_total: 0, cuota_mensual: parseFloat(form.cuota_mensual) || 0, total_cuotas: 999, fecha_inicio: form.fecha_inicio || TODAY, notas: form.notas ? `${form.notas}${form.url_sistema ? ` | URL: ${form.url_sistema}` : ""}` : (form.url_sistema || null) });
+    const body = { cliente: form.cliente, telefono: form.telefono || null, sistema: form.sistema, monto_total: 0, cuota_mensual: parseFloat(form.cuota_mensual) || 0, total_cuotas: 999, fecha_inicio: form.fecha_inicio || TODAY, notas: form.notas ? `${form.notas}${form.url_sistema ? ` | URL: ${form.url_sistema}` : ""}` : (form.url_sistema || null) };
+    if (editId) { await patch("sistemas_contratos", editId, body); } else { await post("sistemas_contratos", body); }
     await load(); setSaving(false); closeModal();
+  };
+  const openEditSis = (s) => {
+    setEditId(s.id);
+    const urlMatch = s.notas?.match(/URL:\s*(https?:\/\/[^\s|]+)/);
+    const url = urlMatch ? urlMatch[1].trim() : "";
+    const notas = s.notas ? s.notas.replace(`| URL: ${url}`, "").replace(`URL: ${url}`, "").trim() : "";
+    setForm({ cliente: s.cliente, sistema: s.sistema, url_sistema: url, cuota_mensual: s.cuota_mensual, fecha_inicio: s.fecha_inicio, telefono: s.telefono||"", notas });
+    setModal("addS");
   };
 
   const addPay = async () => {
@@ -454,7 +476,10 @@ export default function App() {
                                 </button>
                               </td>
                               <td className="py-3 px-4"><button onClick={() => toggleEstadoRec(r)}><Bdg s={r.estado} /></button></td>
-                              <td className="py-3 px-4"><button onClick={() => delRec(r.id)} className="text-slate-200 hover:text-red-400 p-1"><Trash2 size={13} /></button></td>
+                              <td className="py-3 px-4 flex gap-1">
+                                <button onClick={() => openEditRec(r)} className="text-slate-300 hover:text-blue-400 p-1"><Edit2 size={13} /></button>
+                                <button onClick={() => delRec(r.id)} className="text-slate-200 hover:text-red-400 p-1"><Trash2 size={13} /></button>
+                              </td>
                             </tr>
                           );
                         })}
@@ -494,7 +519,10 @@ export default function App() {
                             <td className="py-3 px-4 text-right font-bold text-sky-600 tabular-nums">{fCRC(parseFloat(o.monto)*0.01)}</td>
                             <td className="py-3 px-4 text-slate-400 text-xs">{o.fecha}</td>
                             <td className="py-3 px-4"><Bdg s={o.estado} /></td>
-                            <td className="py-3 px-4"><button onClick={() => delOne(o.id)} className="text-slate-200 hover:text-red-400 p-1"><Trash2 size={13} /></button></td>
+                            <td className="py-3 px-4 flex gap-1">
+                                <button onClick={() => openEditOne(o)} className="text-slate-300 hover:text-blue-400 p-1"><Edit2 size={13} /></button>
+                                <button onClick={() => delOne(o.id)} className="text-slate-200 hover:text-red-400 p-1"><Trash2 size={13} /></button>
+                              </td>
                           </tr>
                         ))}
                       </tbody>
@@ -550,6 +578,7 @@ export default function App() {
                             </div>
                             <div className="flex flex-col items-end gap-1.5">
                               <Bdg s={s.estado} />
+                              <button onClick={() => openEditSis(s)} className="text-slate-300 hover:text-blue-400 p-0.5"><Edit2 size={12} /></button>
                               <button onClick={() => { if(confirm("¿Eliminar contrato?")) del("sistemas_contratos", s.id).then(load); }} className="text-slate-200 hover:text-red-400 p-0.5"><Trash2 size={12} /></button>
                             </div>
                           </div>
@@ -801,7 +830,7 @@ export default function App() {
 
       {/* MODALS */}
       {modal === "addR" && (
-        <Mdl title="Agregar Contrato Recurrente D-APOS" onClose={closeModal} onOk={addRec} saving={saving}>
+        <Mdl title={editId ? "Editar Contrato Recurrente D-APOS" : "Agregar Contrato Recurrente D-APOS"} onClose={closeModal} onOk={addRec} saving={saving}>
           <F lbl="No. Contrato D-APOS"><input className={inp} placeholder="ej: 12345" value={form.no_contrato||""} onChange={sf("no_contrato")} autoComplete="off" /></F>
           <F lbl="Cliente"><input className={inp} placeholder="Nombre completo" value={form.cliente||""} onChange={sf("cliente")} autoComplete="off" /></F>
           <F lbl="Tipo de Servicio">
@@ -829,7 +858,7 @@ export default function App() {
       )}
 
       {modal === "addO" && (
-        <Mdl title="Agregar Venta / Pago Único" onClose={closeModal} onOk={addOne} saving={saving}>
+        <Mdl title={editId ? "Editar Venta / Pago Único" : "Agregar Venta / Pago Único"} onClose={closeModal} onOk={addOne} saving={saving}>
           <F lbl="No. Factura D-APOS"><input className={inp} placeholder="ej: 12345" value={form.no_factura||""} onChange={sf("no_factura")} autoComplete="off" /></F>
           <F lbl="Cliente"><input className={inp} placeholder="Nombre" value={form.cliente||""} onChange={sf("cliente")} autoComplete="off" /></F>
           <F lbl="Descripción"><input className={inp} placeholder="ej: Venta de equipo, Instalación..." value={form.descripcion||""} onChange={sf("descripcion")} autoComplete="off" /></F>
@@ -840,7 +869,7 @@ export default function App() {
       )}
 
       {modal === "addS" && (
-        <Mdl title="Nuevo Contrato de Sistema" onClose={closeModal} onOk={addSis} saving={saving}>
+        <Mdl title={editId ? "Editar Contrato de Sistema" : "Nuevo Contrato de Sistema"} onClose={closeModal} onOk={addSis} saving={saving}>
           <F lbl="Cliente / Empresa"><input className={inp} placeholder="Nombre del cliente" value={form.cliente||""} onChange={sf("cliente")} autoComplete="off" /></F>
           <F lbl="Sistema / Producto"><input className={inp} placeholder="ej: Sistema POS, RRHH, Sitio Web..." value={form.sistema||""} onChange={sf("sistema")} autoComplete="off" /></F>
           <F lbl="URL del Sistema"><input className={inp} placeholder="https://cliente.m0hasistemas.org" value={form.url_sistema||""} onChange={sf("url_sistema")} autoComplete="off" /></F>
