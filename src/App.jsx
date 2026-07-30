@@ -9,7 +9,7 @@ import {
 
 const API = "https://api-contratos.m0hasistemas.org";
 const HDR = { "Content-Type": "application/json", "Prefer": "return=representation" };
-const fCRC = (n) => `₡${Math.round(n || 0).toLocaleString("es-CR")}`;
+const fCRC = (n) => { const num = Math.round(n || 0); return "₡" + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); };
 const TODAY = new Date().toISOString().split("T")[0];
 const NEW_BONUS = 10000;
 
@@ -618,116 +618,181 @@ export default function App() {
               </div>
             </div>
             <div className="overflow-y-auto flex-1">
-              <div id="print-report" ref={reportRef} className="p-8 bg-white" style={{ fontFamily: "system-ui, sans-serif", minWidth: 700 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:32, paddingBottom:20, borderBottom:"2px solid #1e293b" }}>
-                  <div>
-                    <div style={{ color:"#059669", fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", marginBottom:4 }}>m0hasistemas.org</div>
-                    <div style={{ fontSize:24, fontWeight:700, color:"#1e293b" }}>Reporte de Comisiones</div>
-                    <div style={{ fontSize:14, color:"#64748b", marginTop:2 }}>D-APOS Soluciones Tecnológicas</div>
-                  </div>
-                  <div style={{ textAlign:"right" }}>
-                    <div style={{ fontSize:11, color:"#94a3b8", textTransform:"uppercase", fontWeight:600 }}>Período</div>
-                    <div style={{ fontSize:18, fontWeight:700, color:"#334155", marginTop:2, textTransform:"capitalize" }}>{mesAnio}</div>
-                    <div style={{ fontSize:11, color:"#94a3b8", marginTop:4 }}>{now.toLocaleDateString("es-CR")}</div>
-                  </div>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:32 }}>
-                  <div style={{ borderLeft:"4px solid #10b981", background:"#f0fdf4", borderRadius:12, padding:16 }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:"#6b7280", textTransform:"uppercase", marginBottom:4 }}>Comisiones Recurrentes</div>
-                    <div style={{ fontSize:22, fontWeight:700, color:"#1e293b" }}>{fCRC(totRec)}</div>
-                  </div>
-                  <div style={{ borderLeft:"4px solid #0ea5e9", background:"#f0f9ff", borderRadius:12, padding:16 }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:"#6b7280", textTransform:"uppercase", marginBottom:4 }}>Pagos Únicos (1%)</div>
-                    <div style={{ fontSize:22, fontWeight:700, color:"#1e293b" }}>{fCRC(totOne)}</div>
-                  </div>
-                  <div style={{ background:"#1e293b", borderRadius:12, padding:16 }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:"#94a3b8", textTransform:"uppercase", marginBottom:4 }}>Total a Cobrar</div>
-                    <div style={{ fontSize:22, fontWeight:700, color:"#ffffff" }}>{fCRC(totRec+totOne)}</div>
-                  </div>
-                </div>
-                <div style={{ marginBottom:32 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-                    <div style={{ width:10, height:10, borderRadius:"50%", background:"#10b981" }} />
-                    <span style={{ fontWeight:700, color:"#1e293b" }}>Comisiones Recurrentes</span>
-                    <span style={{ fontSize:12, color:"#94a3b8" }}>{activeRec.length} contratos activos</span>
-                  </div>
-                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-                    <thead>
-                      <tr style={{ background:"#1e293b", color:"#fff" }}>
-                        {["Contrato","Cliente","Servicio","Monto","Tasa","Comisión"].map(h => (
-                          <th key={h} style={{ padding:"10px 12px", textAlign:"left", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.05em" }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activeRec.map((r,i) => {
-                        const comm = r.es_nuevo ? 10000 : parseFloat(r.monto)*parseFloat(r.tasa);
-                        return (
-                          <tr key={r.id} style={{ background: i%2===0?"#ffffff":"#f8fafc" }}>
-                            <td style={{ padding:"8px 12px", fontFamily:"monospace", color:"#94a3b8", fontSize:12, borderBottom:"1px solid #f1f5f9" }}>{r.no_contrato||"—"}</td>
-                            <td style={{ padding:"8px 12px", fontWeight:500, color:"#1e293b", borderBottom:"1px solid #f1f5f9" }}>{r.cliente}</td>
-                            <td style={{ padding:"8px 12px", color:"#64748b", fontSize:12, borderBottom:"1px solid #f1f5f9" }}>{r.servicio}</td>
-                            <td style={{ padding:"8px 12px", textAlign:"right", borderBottom:"1px solid #f1f5f9" }}>{fCRC(r.monto)}</td>
-                            <td style={{ padding:"8px 12px", textAlign:"center", borderBottom:"1px solid #f1f5f9" }}>
-                              {r.es_nuevo
-                                ? <span style={{ background:"#fef3c7", color:"#92400e", padding:"2px 8px", borderRadius:20, fontSize:11, fontWeight:600 }}>Nueva</span>
-                                : <span style={{ color:"#64748b", fontSize:12 }}>{(parseFloat(r.tasa)*100).toFixed(0)}%</span>}
-                            </td>
-                            <td style={{ padding:"8px 12px", textAlign:"right", fontWeight:700, color:"#059669", borderBottom:"1px solid #f1f5f9" }}>{fCRC(comm)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr style={{ background:"#f0fdf4", borderTop:"2px solid #86efac" }}>
-                        <td colSpan={5} style={{ padding:"12px", fontWeight:700, color:"#334155" }}>Total Comisiones Recurrentes</td>
-                        <td style={{ padding:"12px", textAlign:"right", fontWeight:700, color:"#059669", fontSize:16 }}>{fCRC(totRec)}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-                {one.length > 0 && (
-                  <div style={{ marginBottom:32 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-                      <div style={{ width:10, height:10, borderRadius:"50%", background:"#0ea5e9" }} />
-                      <span style={{ fontWeight:700, color:"#1e293b" }}>Comisiones Pagos Únicos</span>
-                      <span style={{ fontSize:12, color:"#94a3b8" }}>1% por venta</span>
-                    </div>
-                    <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-                      <thead>
-                        <tr style={{ background:"#1e293b", color:"#fff" }}>
-                          {["Factura","Cliente","Descripción","Monto","Comisión (1%)"].map(h => (
-                            <th key={h} style={{ padding:"10px 12px", textAlign:"left", fontSize:11, fontWeight:600, textTransform:"uppercase" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {one.map((o,i) => (
-                          <tr key={o.id} style={{ background: i%2===0?"#ffffff":"#f8fafc" }}>
-                            <td style={{ padding:"8px 12px", fontFamily:"monospace", color:"#94a3b8", fontSize:12, borderBottom:"1px solid #f1f5f9" }}>{o.no_factura||"—"}</td>
-                            <td style={{ padding:"8px 12px", fontWeight:500, borderBottom:"1px solid #f1f5f9" }}>{o.cliente}</td>
-                            <td style={{ padding:"8px 12px", color:"#64748b", fontSize:12, borderBottom:"1px solid #f1f5f9" }}>{o.descripcion}</td>
-                            <td style={{ padding:"8px 12px", textAlign:"right", borderBottom:"1px solid #f1f5f9" }}>{fCRC(o.monto)}</td>
-                            <td style={{ padding:"8px 12px", textAlign:"right", fontWeight:700, color:"#0284c7", borderBottom:"1px solid #f1f5f9" }}>{fCRC(parseFloat(o.monto)*0.01)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr style={{ background:"#f0f9ff", borderTop:"2px solid #7dd3fc" }}>
-                          <td colSpan={4} style={{ padding:"12px", fontWeight:700, color:"#334155" }}>Total Pagos Únicos</td>
-                          <td style={{ padding:"12px", textAlign:"right", fontWeight:700, color:"#0284c7", fontSize:16 }}>{fCRC(totOne)}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                )}
-                <div style={{ borderTop:"2px solid #1e293b", paddingTop:20, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <div style={{ fontSize:11, color:"#94a3b8" }}>Generado por contratos.m0hasistemas.org · {now.toLocaleDateString("es-CR")}</div>
-                  <div style={{ background:"#1e293b", color:"#fff", padding:"12px 24px", borderRadius:12, textAlign:"right" }}>
-                    <div style={{ fontSize:11, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.05em" }}>Total a Cobrar</div>
-                    <div style={{ fontSize:24, fontWeight:700, marginTop:2 }}>{fCRC(totRec+totOne)}</div>
-                  </div>
-                </div>
+              <div id="print-report" ref={reportRef} className="p-8 bg-white" style={{ fontFamily: "system-ui, sans-serif", minWidth: 720 }}>
+                {(() => {
+                  // Agrupar contratos activos por categoría
+                  const CATS = {
+                    "Internet": ["Fibra Óptica Residencial","Fibra Óptica Residencial - VITALICIO","Fibra Óptica Empresarial","Punto a Punto Residencial","Punto a Punto Empresarial"],
+                    "Seguridad": ["Cámaras Analógicas (Renta)","Cámaras IP (Renta)","Alarmas (Renta)","Alarmas + Cámaras (Renta)","Monitoreo"],
+                    "Web & Digital": ["Web Hosting Mensual","SEO / Marketing Web","Mantenimiento Web"],
+                  };
+                  const getCat = (servicio) => Object.entries(CATS).find(([,svcs]) => svcs.some(s => servicio.startsWith(s)))?.[0] || "Otros";
+                  const grouped = activeRec.reduce((acc, r) => {
+                    const cat = getCat(r.servicio);
+                    if (!acc[cat]) acc[cat] = [];
+                    acc[cat].push(r);
+                    return acc;
+                  }, {});
+                  const catColors = { "Internet": "#0ea5e9", "Seguridad": "#f59e0b", "Web & Digital": "#8b5cf6", "Otros": "#6b7280" };
+
+                  return (
+                    <>
+                      {/* Header */}
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28, paddingBottom:20, borderBottom:"3px solid #1e293b" }}>
+                        <div>
+                          <div style={{ color:"#059669", fontSize:11, fontWeight:700, letterSpacing:"0.25em", textTransform:"uppercase", marginBottom:6 }}>m0hasistemas.org</div>
+                          <div style={{ fontSize:26, fontWeight:800, color:"#1e293b", lineHeight:1.1 }}>Reporte de Comisiones</div>
+                          <div style={{ fontSize:14, color:"#64748b", marginTop:4 }}>D-APOS Soluciones Tecnológicas</div>
+                        </div>
+                        <div style={{ textAlign:"right" }}>
+                          <div style={{ fontSize:11, color:"#94a3b8", textTransform:"uppercase", fontWeight:700, letterSpacing:"0.1em" }}>Período</div>
+                          <div style={{ fontSize:20, fontWeight:800, color:"#334155", marginTop:4, textTransform:"capitalize" }}>{mesAnio}</div>
+                          <div style={{ fontSize:11, color:"#94a3b8", marginTop:6 }}>Emitido: {now.toLocaleDateString("es-CR")}</div>
+                        </div>
+                      </div>
+
+                      {/* Resumen */}
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, marginBottom:28 }}>
+                        <div style={{ borderLeft:"4px solid #10b981", background:"#f0fdf4", borderRadius:10, padding:"14px 16px" }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>Comisiones Recurrentes</div>
+                          <div style={{ fontSize:24, fontWeight:800, color:"#1e293b" }}>{fCRC(totRec)}</div>
+                          <div style={{ fontSize:11, color:"#6b7280", marginTop:4 }}>{activeRec.length} contratos activos</div>
+                        </div>
+                        <div style={{ borderLeft:"4px solid #0ea5e9", background:"#f0f9ff", borderRadius:10, padding:"14px 16px" }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>Pagos Únicos (1%)</div>
+                          <div style={{ fontSize:24, fontWeight:800, color:"#1e293b" }}>{fCRC(totOne)}</div>
+                          <div style={{ fontSize:11, color:"#6b7280", marginTop:4 }}>{one.length} venta{one.length !== 1 ? "s" : ""}</div>
+                        </div>
+                        <div style={{ background:"#1e293b", borderRadius:10, padding:"14px 16px" }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>Total a Cobrar</div>
+                          <div style={{ fontSize:24, fontWeight:800, color:"#ffffff" }}>{fCRC(totRec+totOne)}</div>
+                          <div style={{ fontSize:11, color:"#64748b", marginTop:4 }}>Este período</div>
+                        </div>
+                      </div>
+
+                      {/* Tabla agrupada por categoría */}
+                      <div style={{ marginBottom:28 }}>
+                        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12.5 }}>
+                          <thead>
+                            <tr style={{ background:"#1e293b", color:"#fff" }}>
+                              {["Contrato","Cliente","Servicio","Monto","Tasa","Comisión","Nota"].map(h => (
+                                <th key={h} style={{ padding:"10px 11px", textAlign:"left", fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(grouped).map(([cat, rows]) => {
+                              const catTotal = rows.reduce((s, r) => s + (r.es_nuevo ? 10000 : parseFloat(r.monto)*parseFloat(r.tasa)), 0);
+                              const catColor = catColors[cat] || "#6b7280";
+                              return (
+                                <>
+                                  {/* Fila de categoría */}
+                                  <tr key={`cat-${cat}`} style={{ background:"#f8fafc" }}>
+                                    <td colSpan={7} style={{ padding:"7px 11px", borderTop:"2px solid #e2e8f0" }}>
+                                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                        <div style={{ width:8, height:8, borderRadius:"50%", background:catColor }} />
+                                        <span style={{ fontWeight:700, fontSize:12, color:"#374151", textTransform:"uppercase", letterSpacing:"0.08em" }}>{cat}</span>
+                                        <span style={{ fontSize:11, color:"#94a3b8", marginLeft:4 }}>{rows.length} contrato{rows.length !== 1 ? "s" : ""}</span>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  {/* Filas del grupo */}
+                                  {rows.map((r, i) => {
+                                    const comm = r.es_nuevo ? 10000 : parseFloat(r.monto)*parseFloat(r.tasa);
+                                    return (
+                                      <tr key={r.id} style={{ background: i%2===0?"#ffffff":"#f8fafc" }}>
+                                        <td style={{ padding:"7px 11px", fontFamily:"monospace", color:"#94a3b8", fontSize:11, borderBottom:"1px solid #f1f5f9" }}>{r.no_contrato||"—"}</td>
+                                        <td style={{ padding:"7px 11px", fontWeight:500, color:"#1e293b", borderBottom:"1px solid #f1f5f9", maxWidth:160 }}>{r.cliente}</td>
+                                        <td style={{ padding:"7px 11px", color:"#64748b", fontSize:11, borderBottom:"1px solid #f1f5f9" }}>{r.servicio}</td>
+                                        <td style={{ padding:"7px 11px", textAlign:"right", borderBottom:"1px solid #f1f5f9", whiteSpace:"nowrap" }}>{fCRC(r.monto)}</td>
+                                        <td style={{ padding:"7px 11px", textAlign:"center", borderBottom:"1px solid #f1f5f9" }}>
+                                          {r.es_nuevo
+                                            ? <span style={{ background:"#fef3c7", color:"#92400e", padding:"1px 6px", borderRadius:10, fontSize:10, fontWeight:700 }}>NUEVA</span>
+                                            : <span style={{ color:"#64748b" }}>{(parseFloat(r.tasa)*100).toFixed(0)}%</span>}
+                                        </td>
+                                        <td style={{ padding:"7px 11px", textAlign:"right", fontWeight:700, color:"#059669", borderBottom:"1px solid #f1f5f9", whiteSpace:"nowrap" }}>{fCRC(comm)}</td>
+                                        <td style={{ padding:"7px 11px", color:"#94a3b8", fontSize:10, borderBottom:"1px solid #f1f5f9" }}>{r.es_nuevo ? "✦ 1er mes" : ""}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                  {/* Subtotal del grupo */}
+                                  <tr key={`sub-${cat}`}>
+                                    <td colSpan={5} style={{ padding:"6px 11px", textAlign:"right", fontSize:11, color:"#64748b", fontStyle:"italic", borderBottom:"1px solid #e2e8f0" }}>Subtotal {cat}:</td>
+                                    <td style={{ padding:"6px 11px", textAlign:"right", fontWeight:700, color:"#1e293b", fontSize:12, borderBottom:"1px solid #e2e8f0", whiteSpace:"nowrap" }}>{fCRC(catTotal)}</td>
+                                    <td style={{ borderBottom:"1px solid #e2e8f0" }} />
+                                  </tr>
+                                </>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr style={{ background:"#f0fdf4", borderTop:"2px solid #86efac" }}>
+                              <td colSpan={5} style={{ padding:"12px 11px", fontWeight:800, color:"#1e293b", fontSize:13 }}>TOTAL COMISIONES RECURRENTES</td>
+                              <td style={{ padding:"12px 11px", textAlign:"right", fontWeight:800, color:"#059669", fontSize:16, whiteSpace:"nowrap" }}>{fCRC(totRec)}</td>
+                              <td />
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      {/* Pagos únicos */}
+                      {one.length > 0 && (
+                        <div style={{ marginBottom:28 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                            <div style={{ width:8, height:8, borderRadius:"50%", background:"#0ea5e9" }} />
+                            <span style={{ fontWeight:700, color:"#1e293b", fontSize:13 }}>Comisiones Pagos Únicos</span>
+                            <span style={{ fontSize:11, color:"#94a3b8" }}>1% por venta</span>
+                          </div>
+                          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12.5 }}>
+                            <thead>
+                              <tr style={{ background:"#1e293b", color:"#fff" }}>
+                                {["Factura","Cliente","Descripción","Monto","Comisión (1%)"].map(h => (
+                                  <th key={h} style={{ padding:"10px 11px", textAlign:"left", fontSize:10, fontWeight:700, textTransform:"uppercase" }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {one.map((o,i) => (
+                                <tr key={o.id} style={{ background: i%2===0?"#ffffff":"#f8fafc" }}>
+                                  <td style={{ padding:"7px 11px", fontFamily:"monospace", color:"#94a3b8", fontSize:11, borderBottom:"1px solid #f1f5f9" }}>{o.no_factura||"—"}</td>
+                                  <td style={{ padding:"7px 11px", fontWeight:500, borderBottom:"1px solid #f1f5f9" }}>{o.cliente}</td>
+                                  <td style={{ padding:"7px 11px", color:"#64748b", fontSize:11, borderBottom:"1px solid #f1f5f9" }}>{o.descripcion}</td>
+                                  <td style={{ padding:"7px 11px", textAlign:"right", borderBottom:"1px solid #f1f5f9", whiteSpace:"nowrap" }}>{fCRC(o.monto)}</td>
+                                  <td style={{ padding:"7px 11px", textAlign:"right", fontWeight:700, color:"#0284c7", borderBottom:"1px solid #f1f5f9", whiteSpace:"nowrap" }}>{fCRC(parseFloat(o.monto)*0.01)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot>
+                              <tr style={{ background:"#f0f9ff", borderTop:"2px solid #7dd3fc" }}>
+                                <td colSpan={4} style={{ padding:"10px 11px", fontWeight:800, color:"#1e293b" }}>Total Pagos Únicos</td>
+                                <td style={{ padding:"10px 11px", textAlign:"right", fontWeight:800, color:"#0284c7", fontSize:15, whiteSpace:"nowrap" }}>{fCRC(totOne)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* Footer con total + firma */}
+                      <div style={{ borderTop:"2px solid #1e293b", paddingTop:20, marginTop:8 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:20 }}>
+                          {/* Firma */}
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:11, color:"#94a3b8", marginBottom:32, fontStyle:"italic" }}>Reporte generado el {now.toLocaleDateString("es-CR")} mediante contratos.m0hasistemas.org</div>
+                            <div style={{ borderTop:"1px solid #cbd5e1", paddingTop:8, width:220 }}>
+                              <div style={{ fontSize:11, color:"#64748b" }}>Firma y fecha de aprobación de pago</div>
+                            </div>
+                          </div>
+                          {/* Total final */}
+                          <div style={{ background:"#1e293b", color:"#fff", padding:"16px 28px", borderRadius:12, textAlign:"right", minWidth:200 }}>
+                            <div style={{ fontSize:10, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.12em", marginBottom:6 }}>Total a Cobrar</div>
+                            <div style={{ fontSize:28, fontWeight:800 }}>{fCRC(totRec+totOne)}</div>
+                            <div style={{ fontSize:10, color:"#64748b", marginTop:6, textTransform:"capitalize" }}>{mesAnio}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
